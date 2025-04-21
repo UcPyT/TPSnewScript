@@ -1,0 +1,92 @@
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local ball = nil
+local maxReachDistance = 5         -- أقصى مسافة يمكن التحكم فيها
+local maxBallSpeed = 300           -- السرعة القصوى للكرة
+local minBallSpeed = 50            -- الحد الأدنى للكرة
+local reactionSpeed = 0.1          -- سرعة الاستجابة للتحكم
+local lastTouchTime = 0
+local cooldown = 0.1               -- فترة التهدئة بين التصديات
+local baseSavePower = 500          -- القوة الأساسية عند التصدي
+
+-- تحديد النسبة المئوية للقوة (من 0 إلى 100)
+local powerPercentage = 90         -- هنا يمكنك تغيير القيمة إلى أي نسبة مئوية تريدها
+
+-- حساب القوة المعدلة بناءً على النسبة المئوية
+local function getAdjustedPower()
+    return baseSavePower * (powerPercentage / 100)  -- القوة بناءً على النسبة المئوية
+end
+
+-- البحث عن الكرة
+local function findBall()
+    for _, obj in pairs(workspace:GetChildren()) do
+        if obj:IsA("Part") and obj.Name == "Ball" then
+            ball = obj
+            return
+        end
+    end
+end
+
+-- وظيفة للتحكم في الكرة باستخدام النسبة المئوية
+local function controlBall()
+    if ball then
+        -- تحديد السرعة بناءً على النسبة المئوية للقوة
+        local speed = minBallSpeed + (maxBallSpeed - minBallSpeed) * (powerPercentage / 100)
+        local savePower = getAdjustedPower()  -- الحصول على القوة المعدلة بناءً على النسبة
+
+        -- استجابة سريعة مع تغيير الاتجاه
+        local moveDirection = humanoidRootPart.CFrame.lookVector
+        local newVelocity = moveDirection * speed
+
+        -- تطبيق الحركة على الكرة
+        ball.AssemblyLinearVelocity = newVelocity
+
+        -- إضافة تأثير الاهتزاز/الاستجابة
+        if tick() - lastTouchTime > cooldown then
+            local bodyGyro = Instance.new("BodyGyro")
+            bodyGyro.MaxTorque = Vector3.new(5000, 5000, 5000)
+            bodyGyro.CFrame = CFrame.new(ball.Position, ball.Position + newVelocity)
+            bodyGyro.Parent = ball
+
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)  -- قوة ضخمة
+            bodyVelocity.Velocity = newVelocity
+            bodyVelocity.Parent = ball
+
+            -- التحديث للوقت الأخير
+            lastTouchTime = tick()
+        end
+    end
+end
+
+-- منع اللاعبين الآخرين من التقاط الكرة بسهولة
+local function preventOtherPlayersFromTouchingBall()
+    if ball then
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj:IsA("Part") and obj.Name ~= "Ball" and obj:IsDescendantOf(game.Players) then
+                local distance = (ball.Position - obj.Position).Magnitude
+                if distance <= maxReachDistance then
+                    -- إذا لمس لاعب الكرة، ندفعها بقوة أكبر بناءً على النسبة المئوية
+                    local direction = (ball.Position - obj.Position).Unit
+                    ball.AssemblyLinearVelocity = direction * getAdjustedPower()
+                end
+            end
+        end
+    end
+end
+
+-- تحديث الكرة بشكل مستمر
+local function updateBall()
+    while true do
+        findBall()
+        if ball then
+            controlBall()
+            preventOtherPlayersFromTouchingBall()
+        end
+        wait(reactionSpeed)  -- تحديث سريع لتحسين الاستجابة
+    end
+end
+
+-- تشغيل السكربت
+task.spawn(updateBall)
