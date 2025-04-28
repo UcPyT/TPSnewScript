@@ -1,1 +1,256 @@
 
+print("Everything below is just a debug for the anti cheat bypass, if it is finished be happy. If not, exit the game and try again to avoid the risk of banning.")
+print("╭────────────────────DEBUG DEMO────────────────────╮")
+local Players = game:GetService("Players")
+local plr = Players.LocalPlayer
+local lighting = game:GetService("Lighting")
+
+--= Function Checker =--
+local function func(name)
+    local ok, result = pcall(function()
+        if name == "newcclosure" then
+            return typeof(newcclosure(function() end)) == "function"
+        end
+        return typeof(rawget(getgenv(), name)) == "function"
+    end)
+    return ok and result
+end
+
+--= Required Functions =--
+local require = {
+    hookfunction = func("hookfunction"),
+    getconnections = func("getconnections"),
+    getrawmetatable = func("getrawmetatable"),
+    setreadonly = func("setreadonly"),
+    newcclosure = func("newcclosure")
+}
+
+--= Verify Executor =--
+for name, ok in pairs(require) do
+    if not ok then
+        setclipboard("https://discord.gg/fbdcABJqsz")
+        task.wait(2)
+        plr:Kick("Your executor does not support the function: " .. name .. " | \nJoin discord for get executor that supports the script (COPIED IN CLIPBOARD)")
+        return
+    end
+end
+
+print("Step 1: ✅")
+
+--= Clear AntiCheat Lost =--
+local trashthings = {
+    workspace.FE and workspace.FE.Actions and workspace.FE.Actions:FindFirstChild(" "),
+    workspace.FE and workspace.FE.Actions and workspace.FE.Actions:FindFirstChild("BName"),
+}
+
+for _, obj in ipairs(trashthings) do
+    if obj then
+        pcall(function() obj:Destroy() end)
+    end
+end
+
+--= Clear UI Elements =--
+for _, gui in ipairs({plr:FindFirstChild("PlayerGui") and plr.PlayerGui:FindFirstChild("Start"), game.StarterGui:FindFirstChild("Start")}) do
+    if gui then
+        for _, v in ipairs(gui:GetChildren()) do
+            if v.Name == "CheckPlayerW" then
+                pcall(function() v:Destroy() end)
+            end
+        end
+    end
+end
+
+print("Step 2: ✅")
+
+--= Character Check =--
+local function check()
+    local character = plr.Character or plr.CharacterAdded:Wait()
+    local target = character:FindFirstChild(" ")
+    local condition = true
+    if condition and target then
+        target:Destroy()
+    end
+end
+
+plr.CharacterAdded:Connect(check)
+
+if plr.Character then
+    check()
+end
+
+print("Step 3: ✅")
+
+--= Hook Metatable =--
+local mt = getrawmetatable(game)
+local oldIndex = mt.__index
+setreadonly(mt, false)
+
+mt.__index = newcclosure(function(t, k)
+    if t == workspace and k == "GetRealPhysicsFPS" then
+        return function() return 60 end
+    end
+    return oldIndex(t, k)
+end)
+
+print("Step 4: ✅")
+
+--= WS & Jump Bypass =--
+local function humset(hum)
+    hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+        if hum.WalkSpeed > 23 then
+            hum.WalkSpeed = 23
+        end
+    end)
+
+    hum:GetPropertyChangedSignal("JumpPower"):Connect(function()
+        if hum.JumpPower > 50 then
+            hum.JumpPower = 50
+        end
+    end)
+
+    hum:SetAttribute("WalkSpeed", 23)
+    hum:SetAttribute("JumpPower", 50)
+    hum.AutoJumpEnabled = false
+end
+
+plr.CharacterAdded:Connect(function(char)
+    char:WaitForChild("Humanoid", 5)
+    humset(char.Humanoid)
+end)
+
+if plr.Character then
+    humset(plr.Character.Humanoid)
+end
+
+print("Step 5: ✅")
+
+--= Reach Bypass =--
+local function offsizecheck(char)
+    local parts = {
+        "Head", "Torso", "HumanoidRootPart", "Left Leg", "Right Leg",
+        "Left Arm", "Right Arm", "LeftFoot", "RightFoot", "LeftHand",
+        "RightHand", "LeftLowerArm", "RightLowerArm", "LeftLowerLeg",
+        "RightLowerLeg", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg",
+        "RightUpperLeg", "UpperTorso", "LowerTorso"
+    }
+
+    for _, partName in ipairs(parts) do
+        local part = char:FindFirstChild(partName)
+        if part then
+            for _, conn in pairs(getconnections(part.Changed)) do
+                if tostring(conn.Function):find("Ban") then
+                    conn:Disable()
+                end
+            end
+        end
+    end
+end
+
+plr.CharacterAdded:Connect(offsizecheck)
+if plr.Character then offsizecheck(plr.Character) end
+
+print("Step 6: ✅")
+
+--= Sky Bypass =--
+local lgsky = {
+    SkyboxBk = "rbxassetid://6778646360",
+    SkyboxDn = "rbxassetid://6778658683",
+    SkyboxFt = "rbxassetid://6778648039",
+    SkyboxLf = "rbxassetid://6778649136",
+    SkyboxRt = "rbxassetid://6778650519",
+    SkyboxUp = "rbxassetid://6778658364"
+}
+
+local function forcesky()
+    local sky = lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky")
+    for prop, value in pairs(lgsky) do
+        if sky[prop] ~= value then
+            sky[prop] = value
+        end
+    end
+    sky.Parent = lighting
+end
+
+forcesky()
+lighting.ChildAdded:Connect(function(child)
+    if child:IsA("Sky") then
+        forcesky()
+    end
+end)
+
+print("Step 7: ✅")
+
+--= Bypass TPS =--
+local function bypasstps()
+    local tpsSystem = workspace:FindFirstChild("TPSSystem")
+    if tpsSystem and tpsSystem:FindFirstChild("TPS") then
+        local dummy = Instance.new("Part")
+        dummy.Transparency = 1
+        dummy.CanCollide = false
+        dummy.Anchored = true
+        dummy.Parent = workspace
+
+        local constraints = {
+            "NoCollisionConstraintA",
+            "NoCollisionConstraintB",
+            "NoCollisionConstraintC"
+        }
+
+        for _, name in ipairs(constraints) do
+            local constraint = tpsSystem.TPS:FindFirstChild(name)
+            if constraint then
+                constraint.Part1 = dummy
+            end
+        end
+    end
+end
+
+bypasstps()
+workspace.DescendantAdded:Connect(function(child)
+    if child.Name == "TPS" then
+        bypasstps()
+    end
+end)
+
+print("Step 8: ✅")
+
+--= Hook Ban __namecall =--
+local mt = getrawmetatable(game)
+local oldNamecall = mt.__namecall
+setreadonly(mt, false)
+
+mt.__namecall = newcclosure(function(...)
+    local args = {...}
+    local method = getnamecallmethod()
+
+    if method == "FireServer" then
+        local inst = args[1]
+        if typeof(inst) == "Instance" then
+            if inst.Name == "Ban" or inst.Name == "NoNeedJealousy" then
+                return nil
+            end
+        end
+    end
+    return oldNamecall(...)
+end)
+setreadonly(mt, true)
+
+--= Const Protect =--
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            local hum = plr.Character.Humanoid
+            if hum.WalkSpeed > 23 then hum.WalkSpeed = 23 end
+            if hum.JumpPower > 50 then hum.JumpPower = 50 end
+            hum.AutoJumpEnabled = false
+        end
+        forcesky()
+        bypasstps()
+    end
+end)
+print("Step 9: ✅")
+print("┕────────────────────RESULT────────────────────┙")
+print("✅Succes Bypass")
+print("_______________________Everything below is a script error!_______________________")
+print("If you have anything after this message, print it and send it to Lunar official discord.")
